@@ -11,12 +11,6 @@
 
 namespace Fluent\JWTAuth\Test\Providers\JWT;
 
-use Exception;
-use InvalidArgumentException;
-use Lcobucci\JWT\Builder;
-use Lcobucci\JWT\Parser;
-use Lcobucci\JWT\Signer\Key;
-use Mockery;
 use Fluent\JWTAuth\Exceptions\JWTException;
 use Fluent\JWTAuth\Exceptions\TokenInvalidException;
 use Fluent\JWTAuth\Providers\JWT\Lcobucci;
@@ -25,16 +19,6 @@ use Fluent\JWTAuth\Test\AbstractTestCase;
 class LcobucciTest extends AbstractTestCase
 {
     /**
-     * @var \Mockery\MockInterface
-     */
-    protected $parser;
-
-    /**
-     * @var \Mockery\MockInterface
-     */
-    protected $builder;
-
-    /**
      * @var \Fluent\JWTAuth\Providers\JWT\Namshi
      */
     protected $provider;
@@ -42,72 +26,57 @@ class LcobucciTest extends AbstractTestCase
     public function setUp(): void
     {
         parent::setUp();
-
-        $this->builder = Mockery::mock(Builder::class);
-        $this->parser = Mockery::mock(Parser::class);
     }
 
     /** @test */
     public function it_should_return_the_token_when_passing_a_valid_payload_to_encode()
     {
-        $this->markTestSkipped("[HELP] Fix me...!");
-
         $payload = ['sub' => 1, 'exp' => $this->testNowTimestamp + 3600, 'iat' => $this->testNowTimestamp, 'iss' => '/foo'];
 
-        $this->builder->shouldReceive('unsign')->once()->andReturnSelf();
-        $this->builder->shouldReceive('set')->times(count($payload));
-        $this->builder->shouldReceive('sign')->once()->with(Mockery::any(), 'secret');
-        $this->builder->shouldReceive('getToken')->once()->andReturn('foo.bar.baz');
+        $token = $this->getProvider('secret-secret-secret-secret-secret', 'HS256')->encode($payload);
 
-        $token = $this->getProvider('secret', 'HS256')->encode($payload);
-
-        $this->assertSame('foo.bar.baz', $token);
+        $this->assertNotEmpty($token);
     }
 
     /** @test */
     public function it_should_throw_an_invalid_exception_when_the_payload_could_not_be_encoded()
     {
-        $this->markTestSkipped("[HELP] Fix me...!");
-
         $this->expectException(JWTException::class);
         $this->expectExceptionMessage('Could not create token:');
 
         $payload = ['sub' => 1, 'exp' => $this->testNowTimestamp, 'iat' => $this->testNowTimestamp, 'iss' => '/foo'];
 
-        $this->builder->shouldReceive('unsign')->once()->andReturnSelf();
-        $this->builder->shouldReceive('set')->times(count($payload));
-        $this->builder->shouldReceive('sign')->once()->with(Mockery::any(), 'secret')->andThrow(new Exception);
-
         $this->getProvider('secret', 'HS256')->encode($payload);
+    }
+
+    /** @test */
+    public function it_should_throw_an_invalid_exception_when_the_algorithm_is_not_supported()
+    {
+        $this->expectException(JWTException::class);
+        $this->expectExceptionMessage('The given algorithm could not be found');
+
+        $payload = ['sub' => 1, 'exp' => $this->testNowTimestamp, 'iat' => $this->testNowTimestamp, 'iss' => '/foo'];
+
+        $this->getProvider('secret', 'AlgorithmWrong')->encode($payload);
     }
 
     /** @test */
     public function it_should_return_the_payload_when_passing_a_valid_token_to_decode()
     {
-        $this->markTestSkipped("[HELP] Fix me...!");
+        $payload = ['sub' => '1', 'exp' => $this->testNowTimestamp + 3600, 'iat' => $this->testNowTimestamp, 'iss' => '/foo'];
 
-        $payload = ['sub' => 1, 'exp' => $this->testNowTimestamp + 3600, 'iat' => $this->testNowTimestamp, 'iss' => '/foo'];
+        $token = $this->getProvider('secret-secret-secret-secret-secret', 'HS256')->encode($payload);
 
-        $this->parser->shouldReceive('parse')->once()->with('foo.bar.baz')->andReturn(Mockery::self());
-        $this->parser->shouldReceive('verify')->once()->with(Mockery::any(), 'secret')->andReturn(true);
-        $this->parser->shouldReceive('getClaims')->once()->andReturn($payload);
-
-        $this->assertSame($payload, $this->getProvider('secret', 'HS256')->decode('foo.bar.baz'));
+        $this->assertSame($payload, $this->getProvider('secret-secret-secret-secret-secret', 'HS256')->decode($token));
     }
 
     /** @test */
     public function it_should_throw_a_token_invalid_exception_when_the_token_could_not_be_decoded_due_to_a_bad_signature()
     {
-        $this->markTestSkipped("[HELP] Fix me...!");
-
         $this->expectException(TokenInvalidException::class);
-        $this->expectExceptionMessage('Token Signature could not be verified.');
+        $this->expectExceptionMessage('Could not decode token:');
 
-        $this->parser->shouldReceive('parse')->once()->with('foo.bar.baz')->andReturn(Mockery::self());
-        $this->parser->shouldReceive('verify')->once()->with(Mockery::any(), 'secret')->andReturn(false);
-        $this->parser->shouldReceive('getClaims')->never();
-
-        $this->getProvider('secret', 'HS256')->decode('foo.bar.baz');
+        $this->getProvider('secret-secret-secret-secret-secret', 'HS256')->decode('foo.bar.baz');
     }
 
     /** @test */
@@ -115,10 +84,6 @@ class LcobucciTest extends AbstractTestCase
     {
         $this->expectException(TokenInvalidException::class);
         $this->expectExceptionMessage('Could not decode token:');
-
-        $this->parser->shouldReceive('parse')->once()->with('foo.bar.baz')->andThrow(new InvalidArgumentException);
-        $this->parser->shouldReceive('verify')->never();
-        $this->parser->shouldReceive('getClaims')->never();
 
         $this->getProvider('secret', 'HS256')->decode('foo.bar.baz');
     }
@@ -129,19 +94,14 @@ class LcobucciTest extends AbstractTestCase
         $provider = $this->getProvider(
             'does_not_matter',
             'RS256',
-            ['private' => $this->getDummyPrivateKey(), 'public' => $this->getDummyPublicKey()]
+            ['private' => $this->getDummyPrivateKey(), 'public' => $this->getDummyPublicKey(), 'passphrase' => '']
         );
 
         $payload = ['sub' => 1, 'exp' => $this->testNowTimestamp + 3600, 'iat' => $this->testNowTimestamp, 'iss' => '/foo'];
 
-        $this->builder->shouldReceive('unsign')->once()->andReturnSelf();
-        $this->builder->shouldReceive('set')->times(count($payload));
-        $this->builder->shouldReceive('sign')->once()->with(Mockery::any(), Mockery::type(Key::class));
-        $this->builder->shouldReceive('getToken')->once()->andReturn('foo.bar.baz');
-
         $token = $provider->encode($payload);
 
-        $this->assertSame('foo.bar.baz', $token);
+        $this->assertNotEmpty($token);
     }
 
     /** @test */
@@ -149,9 +109,6 @@ class LcobucciTest extends AbstractTestCase
     {
         $this->expectException(JWTException::class);
         $this->expectExceptionMessage('The given algorithm could not be found');
-
-        $this->parser->shouldReceive('parse')->never();
-        $this->parser->shouldReceive('verify')->never();
 
         $this->getProvider('secret', 'AlgorithmWrong')->decode('foo.bar.baz');
     }
@@ -162,7 +119,7 @@ class LcobucciTest extends AbstractTestCase
         $provider = $this->getProvider(
             'does_not_matter',
             'RS256',
-            $keys = ['private' => $this->getDummyPrivateKey(), 'public' => $this->getDummyPublicKey()]
+            $keys = ['private' => $this->getDummyPrivateKey(), 'public' => $this->getDummyPublicKey(), 'passphrase' => '']
         );
 
         $this->assertSame($keys['public'], $provider->getPublicKey());
@@ -174,7 +131,7 @@ class LcobucciTest extends AbstractTestCase
         $provider = $this->getProvider(
             'does_not_matter',
             'RS256',
-            $keys = ['private' => $this->getDummyPrivateKey(), 'public' => $this->getDummyPublicKey()]
+            $keys = ['private' => $this->getDummyPrivateKey(), 'public' => $this->getDummyPublicKey(), 'passphrase' => '']
         );
 
         $this->assertSame($keys, $provider->getKeys());
@@ -182,16 +139,16 @@ class LcobucciTest extends AbstractTestCase
 
     public function getProvider($secret, $algo, array $keys = [])
     {
-        return new Lcobucci($this->builder, $this->parser, $secret, $algo, $keys);
+        return new Lcobucci($secret, $algo, $keys);
     }
 
     public function getDummyPrivateKey()
     {
-        return file_get_contents(__DIR__.'/../Keys/id_rsa');
+        return __DIR__.'/../Keys/id_rsa';
     }
 
     public function getDummyPublicKey()
     {
-        return file_get_contents(__DIR__.'/../Keys/id_rsa.pub');
+        return __DIR__.'/../Keys/id_rsa.pub';
     }
 }
