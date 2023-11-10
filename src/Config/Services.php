@@ -18,8 +18,6 @@ use Fluent\JWTAuth\Manager;
 use Fluent\JWTAuth\Providers\JWT\Lcobucci;
 use Fluent\JWTAuth\Providers\Storage\CacheStorage;
 use Fluent\JWTAuth\Validators\PayloadValidator;
-use Lcobucci\JWT\Builder;
-use Lcobucci\JWT\Parser;
 
 class Services extends BaseService
 {
@@ -73,8 +71,6 @@ class Services extends BaseService
         }
 
         return new Lcobucci(
-            new Builder(),
-            new Parser(),
             static::config('secret'),
             static::config('algo'),
             static::config('keys')

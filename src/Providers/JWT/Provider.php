@@ -168,7 +168,7 @@ abstract class Provider
     /**
      * Get the key used to verify the tokens.
      *
-     * @return resource|string
+     * @return Key|string
      */
     protected function getVerificationKey()
     {
