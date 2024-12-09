@@ -29,7 +29,7 @@ trait RefreshFlowTrait
      */
     public function setRefreshFlow($refreshFlow = true)
     {
-        $this->refreshFlowTrait = $refreshFlow;
+        $this->refreshFlow = $refreshFlow;
 
         return $this;
     }
